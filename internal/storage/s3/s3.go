@@ -2,10 +2,13 @@ package s3
 
 import (
 	"fmt"
-	"github.com/thisissoon/bucket-boss/internal/config"
 	"strings"
 
+	"github.com/thisissoon/bucket-boss/internal/config"
+	"github.com/thisissoon/bucket-boss/internal/storage"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -52,4 +55,67 @@ func (s *S3) List(ext string) ([]string, error) {
 		return nil, fmt.Errorf("failed to list objects: %v", err)
 	}
 	return keys, nil
+}
+
+// Delete deletes a single object from the bucket
+func (s *S3) Delete(key string) error {
+	input := &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	}
+
+	_, err := s.svc.DeleteObject(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			return fmt.Errorf("error delete object: %v", err)
+		}
+		return nil
+	}
+	return nil
+}
+
+func convertKeys(ks []string) []*s3.ObjectIdentifier {
+	objects := []*s3.ObjectIdentifier{}
+	for _, k := range ks {
+		objects = append(objects, &s3.ObjectIdentifier{
+			Key: aws.String(k),
+		})
+	}
+	return objects
+}
+
+// DeleteMulti deletes multiple objects from the bucket.
+// Large numbers of keys are batched into requests of a 1000 keys
+func (s *S3) DeleteMulti(keys []string) error {
+	for _, batch := range storage.Batcher(keys, 1000) {
+		objects := convertKeys(batch)
+		input := &s3.DeleteObjectsInput{
+			Bucket: aws.String(s.bucket),
+			Delete: &s3.Delete{
+				Objects: objects,
+				Quiet:   aws.Bool(false),
+			},
+		}
+		_, err := s.svc.DeleteObjects(input)
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				default:
+					fmt.Println(aerr.Error())
+				}
+			} else {
+				// Print the error, cast err to awserr.Error to get the Code and
+				// Message from an error.
+				return fmt.Errorf("error deleting objects: %v", err)
+			}
+		}
+	}
+	return nil
 }

@@ -1,12 +1,19 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/thisissoon/bucket-boss/internal/storage"
 	"github.com/thisissoon/bucket-boss/internal/storage/s3"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+)
+
+var (
+	noBucketProvider = errors.New("Please configure a bucket provider")
+	force            *bool
 )
 
 func purgeCmd() *cobra.Command {
@@ -33,6 +40,15 @@ func purgeByExtentionCmd() *cobra.Command {
 	}
 }
 
+func confirm(msg string) bool {
+	prompt := promptui.Prompt{
+		Label:     msg,
+		IsConfirm: true,
+	}
+	_, err := prompt.Run()
+	return err == nil
+}
+
 func purgeByExtentionRun(_ *cobra.Command, args []string) error {
 	var ext string
 	if len(args) == 1 {
@@ -46,10 +62,11 @@ func purgeByExtentionRun(_ *cobra.Command, args []string) error {
 		}
 		store = s3
 	} else {
-		return fmt.Errorf("Please configure a bucket provider")
+		return noBucketProvider
 	}
 	keys, err := store.List(ext)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	total := len(keys)
@@ -57,17 +74,16 @@ func purgeByExtentionRun(_ *cobra.Command, args []string) error {
 		fmt.Printf("No files to delete matching extension: %v\n", ext)
 		return nil
 	}
-	confirmText := fmt.Sprintf("Are you sure you want to delete %d %v files", len(keys), ext)
-	prompt := promptui.Prompt{
-		Label:     confirmText,
-		IsConfirm: true,
-	}
-	_, err = prompt.Run()
-	if err != nil {
-		fmt.Printf("exiting")
+	confirmText := fmt.Sprintf("Are you sure you want to delete %d %v files", total, ext)
+	ok := confirm(confirmText)
+	if !ok {
+		fmt.Println("exiting")
 		return nil
 	}
 
-	fmt.Printf("deleting files")
+	err = store.DeleteMulti(keys)
+	if err != nil {
+		return err
+	}
 	return nil
 }

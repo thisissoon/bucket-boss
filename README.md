@@ -1,6 +1,6 @@
 # bucket-boss
 
-CLI tool for managing bucket contents
+CLI tool for managing bucket contents, currently only support AWS S3 but designed to support different providers like GCS
 
 
 ## Development
@@ -42,4 +42,11 @@ Alternatively a config file path can be provided through the
 [log]
 console = true
 level = "debug"  # [debug|info|error]
+
+[aws]
+enabled = true
+bucketName = "bucketname" # name of the bucket you want to manage
+region = "region" # bucket region
+accessKey = "AWS_ACCESS_KEY" # AWS access key usually set as an environment variable
+secretKey = "AWS_SECRET_ACCESS_KEY" # AWS secret key usually set as an environment variable
 ```
