@@ -32,8 +32,8 @@ func main() {
 func bucketbossCmd() *cobra.Command {
 	var configPath string
 	cmd := &cobra.Command{
-		Use:   "bucket-boss",
-		Short: "Run the service",
+		Use:           "bucket-boss",
+		Short:         "Run the service",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -51,7 +51,7 @@ func bucketbossCmd() *cobra.Command {
 			log = initLogger(cfg.Log)
 			return nil
 		},
-		RunE:   bucketbossRun,
+		RunE: bucketbossRun,
 	}
 	// Global flags
 	pflags := cmd.PersistentFlags()
@@ -60,6 +60,7 @@ func bucketbossCmd() *cobra.Command {
 	pflags.BoolP("verbose", "v", false, "verbose logging")
 	// Add sub commands
 	cmd.AddCommand(versionCmd())
+	cmd.AddCommand(purgeCmd())
 	return cmd
 }
 
