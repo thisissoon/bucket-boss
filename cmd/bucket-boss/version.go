@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github/thisissoon/bucket-boss/internal/version"
+	"github.com/thisissoon/bucket-boss/internal/version"
 
 	"github.com/spf13/cobra"
 )
